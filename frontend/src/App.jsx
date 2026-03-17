@@ -9,7 +9,7 @@ import ResultsPanel from './components/ResultsPanel';
 import Timeline from './components/Timeline';
 import { Shield, Github, Twitter, Menu, X } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8000/api/analysis';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/analysis';
 
 function App() {
   const [result, setResult] = useState(null);
