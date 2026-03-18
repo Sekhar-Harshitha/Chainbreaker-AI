@@ -55,7 +55,21 @@ function App() {
 
     } catch (error) {
       console.error('Analysis failed', error);
-      alert('Analysis failed. Please ensure the backend is running.');
+      let errorMessage = 'Analysis failed. Please ensure the backend is running.';
+      if (error.response && error.response.data && error.response.data.detail) {
+        // Handle FastAPI validation/internal errors natively
+        const detail = error.response.data.detail;
+        if (typeof detail === 'string') {
+          errorMessage = `Backend Error: ${detail}`;
+        } else if (Array.isArray(detail)) {
+          errorMessage = `Validation Error: ${detail.map(e => e.msg).join(', ')}`;
+        } else {
+          errorMessage = `Backend Error: ${JSON.stringify(detail)}`;
+        }
+      } else if (error.message) {
+        errorMessage = `Network Error: ${error.message}`;
+      }
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }
