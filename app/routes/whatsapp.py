@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request, BackgroundTasks, Form
 from fastapi.responses import Response
 from typing import Optional
 from twilio.rest import Client
+from twilio.twiml.messaging_response import MessagingResponse
 
 from app.core.config import get_settings
 from app.services.transcription import transcribe_audio
@@ -170,17 +171,54 @@ async def process_whatsapp_message(
         except:
              pass
 
-@router.post("/")
+@router.post("/", include_in_schema=False)
+@router.post("", include_in_schema=False)
+@router.get("/", include_in_schema=False)
+@router.get("", include_in_schema=False)
 async def whatsapp_webhook(
     request: Request,
     background_tasks: BackgroundTasks
 ):
-    # Point 4: Use request.form() to get Twilio data
-    form_data = await request.form()
-    sender = form_data.get("From", "")
-    body = form_data.get("Body", "")
-    num_media = int(form_data.get("NumMedia", 0)) # Point 4
-    media_url = form_data.get("MediaUrl0") if num_media > 0 else None
-    
-    background_tasks.add_task(process_whatsapp_message, sender, body, media_url)
-    return Response(content="<Response></Response>", media_type="application/xml")
+    try:
+        if request.method == "GET":
+            return Response(content="Webhook is active", status_code=200)
+
+        # Twilio sends data as x-www-form-urlencoded
+        form_data = await request.form()
+        
+        # Extract sender, body, and media info safely
+        sender = form_data.get("From", "")
+        body = form_data.get("Body", "")
+        num_media_str = form_data.get("NumMedia", "0")
+        
+        try:
+            num_media = int(num_media_str)
+        except ValueError:
+            num_media = 0
+            
+        media_url = form_data.get("MediaUrl0") if num_media > 0 else None
+        
+        # Log the incoming request
+        logger.info(f"Incoming WhatsApp message from {sender}: '{body}' (Media: {media_url})")
+        
+        resp = MessagingResponse()
+
+        # Only process if we have a sender and some content
+        if sender and (body or media_url):
+            background_tasks.add_task(process_whatsapp_message, sender, body, media_url)
+            
+            # Twilio requires a valid XML response to acknowledge receipt
+            if media_url:
+                resp.message("🎙️ Audio received. Analyzing your voice note now...")
+            else:
+                resp.message("🔍 Analyzing your message. Just a moment...")
+        else:
+            resp.message("Hi! Send me a news claim or forward an audio note to verify.")
+            
+        return Response(content=str(resp), media_type="application/xml")
+        
+    except Exception as e:
+        logger.error(f"Error handling webhook: {e}")
+        # Even on error, return safe XML so Twilio doesn't retry infinitely and fail
+        resp = MessagingResponse()
+        return Response(content=str(resp), media_type="application/xml", status_code=200)

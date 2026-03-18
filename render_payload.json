@@ -1,0 +1,17 @@
+{
+  "type": "web_service",
+  "name": "chainbreaker-api",
+  "ownerId": "tea-d0ccuoali9vc73b76k0g",
+  "repo": "https://github.com/Sekhar-Harshitha/Chainbreaker-AI",
+  "autoDeploy": "yes",
+  "branch": "main",
+  "serviceDetails": {
+    "env": "python",
+    "region": "singapore",
+    "plan": "free",
+    "envSpecificDetails": {
+      "buildCommand": "pip install -r requirements.txt",
+      "startCommand": "gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT"
+    }
+  }
+}

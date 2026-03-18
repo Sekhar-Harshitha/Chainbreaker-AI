@@ -26,6 +26,7 @@ app.add_middleware(
 )
 
 app.include_router(whatsapp.router, prefix="/api/webhooks/whatsapp", tags=["Webhooks"])
+app.include_router(whatsapp.router, prefix="/webhook", tags=["Webhooks-Direct"])
 app.include_router(test_pipeline.router, prefix="/test", tags=["Test"])
 app.include_router(audio.router, prefix="/api/analysis", tags=["Analysis"])
 
